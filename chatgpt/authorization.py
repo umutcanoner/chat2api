@@ -1,6 +1,7 @@
 import asyncio
 import json
 import random
+import os
 
 from fastapi import HTTPException
 
@@ -11,68 +12,25 @@ from utils.Logger import logger
 
 
 def get_req_token(req_token, seed=None):
-    if configs.auto_seed:
-        available_token_list = list(set(globals.token_list) - set(globals.error_token_list))
-        length = len(available_token_list)
-        if seed and length > 0:
-            if seed not in globals.seed_map.keys():
-                globals.seed_map[seed] = {"token": random.choice(available_token_list), "conversations": []}
-                with open(globals.SEED_MAP_FILE, "w") as f:
-                    json.dump(globals.seed_map, f, indent=4)
-            else:
-                req_token = globals.seed_map[seed]["token"]
-            return req_token
-
-        if req_token in configs.authorization_list:
-            if len(available_token_list) > 0:
-                if configs.random_token:
-                    req_token = random.choice(available_token_list)
-                    return req_token
-                else:
-                    globals.count += 1
-                    globals.count %= length
-                    return available_token_list[globals.count]
-            else:
-                return None
-        else:
-            return req_token
-    else:
-        seed = req_token
-        if seed not in globals.seed_map.keys():
-            raise HTTPException(status_code=401, detail={"error": "Invalid Seed"})
-        return globals.seed_map[seed]["token"]
+    # Always return the AUTHORIZATION token from .env
+    env_token = os.getenv('AUTHORIZATION')
+    if not env_token:
+        raise HTTPException(status_code=500, detail="AUTHORIZATION environment variable not set")
+    return env_token.strip("'")  # Remove single quotes from the token
 
 
 async def verify_token(req_token):
-    if not req_token:
-        if configs.authorization_list:
-            logger.error("Unauthorized with empty token.")
-            raise HTTPException(status_code=401)
-        else:
-            return None
-    else:
-        if req_token.startswith("eyJhbGciOi") or req_token.startswith("fk-"):
-            access_token = req_token
-            return access_token
-        elif len(req_token) == 45:
-            try:
-                if req_token in globals.error_token_list:
-                    raise HTTPException(status_code=401, detail="Error RefreshToken")
-
-                access_token = await rt2ac(req_token, force_refresh=False)
-                return access_token
-            except HTTPException as e:
-                raise HTTPException(status_code=e.status_code, detail=e.detail)
-        else:
-            return req_token
+    # Always verify against the AUTHORIZATION token from .env
+    env_token = os.getenv('AUTHORIZATION')
+    if not env_token:
+        raise HTTPException(status_code=500, detail="AUTHORIZATION environment variable not set")
+    
+    env_token = env_token.strip("'")  # Remove single quotes from the token
+    
+    # Since we're using a direct access token from .env, we can return it directly
+    return env_token
 
 
 async def refresh_all_tokens(force_refresh=False):
-    for token in list(set(globals.token_list) - set(globals.error_token_list)):
-        if len(token) == 45:
-            try:
-                await asyncio.sleep(0.5)
-                await rt2ac(token, force_refresh=force_refresh)
-            except HTTPException:
-                pass
-    logger.info("All tokens refreshed.")
+    # Since we're using a static token from .env, token refresh is not needed
+    logger.info("Token refresh skipped - using static AUTHORIZATION token from .env")
