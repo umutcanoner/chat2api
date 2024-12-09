@@ -10,7 +10,7 @@ services:
     volumes:
       - ./data:/app/data
     environment:
-      - TZ=Asia/Shanghai
+      - TZ=Europe/Istanbul
       - AUTHORIZATION=sk-xxx
 
   watchtower:

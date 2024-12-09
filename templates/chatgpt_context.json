@@ -54,7 +54,7 @@
                     "cfIpLatitude": null,
                     "cfIpLongitude": null,
                     "cfIpCity": null,
-                    "cfTimezone": "Asia/Shanghai",
+                    "cfTimezone": "Europe/Istanbul",
                     "userLocale": "en-US",
                     "statsig": {
                         "payload": {
