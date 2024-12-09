@@ -325,7 +325,7 @@ def get_url_from_content(content):
     if isinstance(content, str) and content.startswith('http'):
         try:
             url = re.match(
-                r'(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))',
+                r'(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»""'']))',
                 content.split(' ')[0])[0]
             content = content.replace(url, '').strip()
             return url, content
@@ -364,12 +364,28 @@ def format_messages_with_url(content):
 async def api_messages_to_chat(service, api_messages, upload_by_url=False):
     file_tokens = 0
     chat_messages = []
+    
+    # Handle system messages for o1 series models
+    is_o1_model = service.req_model in ["o1", "o1-mini", "o1-pro", "o1-preview"]
+    system_message = None
+    
     for api_message in api_messages:
         role = api_message.get('role')
         content = api_message.get('content')
+        
+        # For o1 models, collect system message to prepend to first user message
+        if is_o1_model and role == 'system':
+            system_message = content
+            continue
+            
         if upload_by_url:
             if isinstance(content, str):
                 content = format_messages_with_url(content)
+                
+        # For o1 models, prepend system message to first user message
+        if is_o1_model and role == 'user' and system_message and not any(m.get('author', {}).get('role') == 'user' for m in chat_messages):
+            content = f"```\nTreat this as System Message:\n{system_message}\n```\n\n{content}"
+            
         if isinstance(content, list):
             parts = []
             attachments = []
