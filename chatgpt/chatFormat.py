@@ -384,7 +384,7 @@ async def api_messages_to_chat(service, api_messages, upload_by_url=False):
                 
         # For o1 models, prepend system message to first user message
         if is_o1_model and role == 'user' and system_message and not any(m.get('author', {}).get('role') == 'user' for m in chat_messages):
-            content = f"```\nTreat this as System Message:\n{system_message}\n```\n\n{content}"
+            content = f"```\nGeneral Reminder to YOU:\n{system_message}\n\nEND OF REMINDER\n```\n\n{content}"
             
         if isinstance(content, list):
             parts = []
